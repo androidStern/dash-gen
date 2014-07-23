@@ -1,0 +1,2310 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <link href="css/github.css" rel="stylesheet" type="text/css">
+  <meta charset="utf-8" />
+</head>
+<body>
+
+    <div>
+        <h1><a href="index.html#R">R</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>var R = {};
+
+        // Internal Functions and Properties
+        // ---------------------------------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#undef">undef</a></h1>
+        <h2>&lt;p&gt;A reference to the &lt;code&gt;undefined&lt;/code&gt; value.&lt;/p&gt;&lt;p&gt;Note that this is defined as the result of calling an empty function because JSHint&lt;br /&gt;complains about these constructs:&lt;/p&gt;&lt;p&gt;var undef = void 0;&lt;br /&gt;var undef = undefined;&lt;/p&gt;<h2>
+        <pre>var undef = (function () {})();<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#curry">curry</a></h1>
+        <h2>&lt;p&gt;Creates a new version of &lt;code&gt;fn&lt;/code&gt; that, when invoked, will return either:&lt;/p&gt;&lt;ul&gt;
+&lt;li&gt;A new function ready to accept one or more of &lt;code&gt;fn&lt;/code&gt;&amp;#39;s remaining arguments, if all of&lt;br /&gt;&lt;code&gt;fn&lt;/code&gt;&amp;#39;s expected arguments have not yet been provided&lt;/li&gt;
+&lt;li&gt;&lt;code&gt;fn&lt;/code&gt;&amp;#39;s result if all of its expected arguments have been provided&lt;/li&gt;
+&lt;/ul&gt;
+&lt;p&gt;Optionally, you may provide an arity for the returned function.&lt;/p&gt;<h2>
+        <pre>var curry = R.curry = function (fn, fnArity) {
+            fnArity = typeof fnArity === &quot;number&quot; ? fnArity : fn.length;
+            function recurry(args) {
+                return arity(Math.max(fnArity - (args &amp;&amp; args.length || 0), 0), function () {
+                    if (arguments.length === 0) { throw NO_ARGS_EXCEPTION; }
+                    var newArgs = concat(args, arguments);
+                    if (newArgs.length &gt;= fnArity) {
+                        return fn.apply(this, newArgs);
+                    }
+                    else {
+                        return recurry(newArgs);
+                    }
+                });
+            }
+
+            return recurry([]);
+        };
+
+        var NO_ARGS_EXCEPTION = new TypeError(&#x27;Function called with no arguments&#x27;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#nAry">nAry</a></h1>
+        <h2>&lt;p&gt;Wraps a function of any arity (including nullary) in a function that accepts exactly &lt;code&gt;n&lt;/code&gt;&lt;br /&gt;parameters. Any extraneous parameters will not be passed to the supplied function.&lt;/p&gt;<h2>
+        <pre>var nAry = R.nAry = (function () {
+            var cache = {
+                0: function (func) {
+                    return function () {
+                        return func.call(this);
+                    };
+                },
+                1: function (func) {
+                    return function (arg0) {
+                        return func.call(this, arg0);
+                    };
+                },
+                2: function (func) {
+                    return function (arg0, arg1) {
+                        return func.call(this, arg0, arg1);
+                    };
+                },
+                3: function (func) {
+                    return function (arg0, arg1, arg2) {
+                        return func.call(this, arg0, arg1, arg2);
+                    };
+                }
+            };
+
+
+            //     For example:
+            //     cache[5] = function(func) {
+            //         return function(arg0, arg1, arg2, arg3, arg4) {
+            //             return func.call(this, arg0, arg1, arg2, arg3, arg4);
+            //         }
+            //     };
+
+            var makeN = function (n) {
+                var fnArgs = mkArgStr(n);
+                var body = [
+                        &quot;    return function(&quot; + fnArgs + &quot;) {&quot;,
+                        &quot;        return func.call(this&quot; + (fnArgs ? &quot;, &quot; + fnArgs : &quot;&quot;) + &quot;);&quot;,
+                    &quot;    }&quot;
+                ].join(&quot;\n&quot;);
+                return new Function(&quot;func&quot;, body);
+            };
+
+            return function (n, fn) {
+                return (cache[n] || (cache[n] = makeN(n)))(fn);
+            };
+        }());<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#unary">unary</a></h1>
+        <h2>&lt;p&gt;Wraps a function of any arity (including nullary) in a function that accepts exactly 1&lt;br /&gt;parameter. Any extraneous parameters will not be passed to the supplied function.&lt;/p&gt;<h2>
+        <pre>R.unary = function (fn) {
+            return nAry(1, fn);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#binary">binary</a></h1>
+        <h2>&lt;p&gt;Wraps a function of any arity (including nullary) in a function that accepts exactly 2&lt;br /&gt;parameters. Any extraneous parameters will not be passed to the supplied function.&lt;/p&gt;<h2>
+        <pre>var binary = R.binary = function (fn) {
+            return nAry(2, fn);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#arity">arity</a></h1>
+        <h2>&lt;p&gt;Wraps a function of any arity (including nullary) in a function that accepts exactly &lt;code&gt;n&lt;/code&gt;&lt;br /&gt;parameters. Unlike &lt;code&gt;nAry&lt;/code&gt;, which passes only &lt;code&gt;n&lt;/code&gt; arguments to the wrapped function,&lt;br /&gt;functions produced by &lt;code&gt;arity&lt;/code&gt; will pass all provided arguments to the wrapped function.&lt;/p&gt;<h2>
+        <pre>var arity = R.arity = (function () {
+            var cache = {
+                0: function (func) {
+                    return function () {
+                        return func.apply(this, arguments);
+                    };
+                },
+                1: function (func) {
+                    return function (arg0) {
+                        return func.apply(this, arguments);
+                    };
+                },
+                2: function (func) {
+                    return function (arg0, arg1) {
+                        return func.apply(this, arguments);
+                    };
+                },
+                3: function (func) {
+                    return function (arg0, arg1, arg2) {
+                        return func.apply(this, arguments);
+                    };
+                }
+            };
+
+            //     For example:
+            //     cache[5] = function(func) {
+            //         return function(arg0, arg1, arg2, arg3, arg4) {
+            //             return func.apply(this, arguments);
+            //         }
+            //     };
+
+            var makeN = function (n) {
+                var fnArgs = mkArgStr(n);
+                var body = [
+                        &quot;    return function(&quot; + fnArgs + &quot;) {&quot;,
+                    &quot;        return func.apply(this, arguments);&quot;,
+                    &quot;    }&quot;
+                ].join(&quot;\n&quot;);
+                return new Function(&quot;func&quot;, body);
+            };
+
+            return function (n, fn) {
+                return (cache[n] || (cache[n] = makeN(n)))(fn);
+            };
+        }());<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#invoker">invoker</a></h1>
+        <h2>&lt;p&gt;Turns a named method of an object (or object prototype) into a function that can be&lt;br /&gt;called directly. Passing the optional &lt;code&gt;len&lt;/code&gt; parameter restricts the returned function to&lt;br /&gt;the initial &lt;code&gt;len&lt;/code&gt; parameters of the method.&lt;/p&gt;&lt;p&gt;The returned function is curried and accepts &lt;code&gt;len + 1&lt;/code&gt; parameters (or &lt;code&gt;method.length + 1&lt;/code&gt;&lt;br /&gt;when &lt;code&gt;len&lt;/code&gt; is not specified), and the final parameter is the target object.&lt;/p&gt;<h2>
+        <pre>var invoker = R.invoker = function (name, obj, len) {
+            var method = obj[name];
+            var length = len === undef ? method.length : len;
+            return method &amp;&amp; curry(function () {
+                if (arguments.length) {
+                    var target = Array.prototype.pop.call(arguments);
+                    var targetMethod = target[name];
+                    if (targetMethod == method) {
+                        return targetMethod.apply(target, arguments);
+                    }
+                }
+                return undef;
+            }, length + 1);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#useWith">useWith</a></h1>
+        <h2>&lt;p&gt;Accepts a function &lt;code&gt;fn&lt;/code&gt; and any number of transformer functions and returns a new&lt;br /&gt;function. When the new function is invoked, it calls the function &lt;code&gt;fn&lt;/code&gt; with parameters&lt;br /&gt;consisting of the result of calling each supplied handler on successive arguments to the&lt;br /&gt;new function. For example:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;lang-javascript&quot;&gt;  var useWithExample = invoke(someFn, transformerFn1, transformerFn2);
+
+  // This invocation:
+  useWithExample(&amp;#39;x&amp;#39;, &amp;#39;y&amp;#39;);
+  // Is functionally equivalent to:
+  someFn(transformerFn1(&amp;#39;x&amp;#39;), transformerFn2(&amp;#39;y&amp;#39;))
+&lt;/code&gt;&lt;/pre&gt;
+&lt;p&gt;If more arguments are passed to the returned function than transformer functions, those&lt;br /&gt;arguments are passed directly to &lt;code&gt;fn&lt;/code&gt; as additional parameters. If you expect additional&lt;br /&gt;arguments that don&amp;#39;t need to be transformed, although you can ignore them, it&amp;#39;s best to&lt;br /&gt;pass an identity function so that the new function reports the correct arity.&lt;/p&gt;<h2>
+        <pre>var useWith = R.useWith = function (fn<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;transformers&lt;/p&gt;<h2>
+        <pre>{
+            var transformers = _slice(arguments, 1);
+            var tlen = transformers.length;
+            return curry(arity(tlen, function () {
+                var args = [], idx = -1;
+                while (++idx &lt; tlen) {
+                    args.push(transformers[idx](arguments[idx]));
+                }
+                return fn.apply(this, args.concat(_slice(arguments, tlen)));
+            }));
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A two-step version of the &#x60;useWith&#x60; function.  This would allow us to write &#x60;project&#x60;, currently written
+        // as &#x60;useWith(map, pickAll, identity)&#x60;, as, instead, &#x60;use(map).over(pickAll, identity)&#x60;, which is a bit
+        // more explicit.
+        // TODO: One of these versions should be eliminated eventually.  So not worrying about the duplication for now.
+        R.use = function (fn) {
+            return {
+                over: function (<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;ransformers&lt;/p&gt;<h2>
+        <pre>{
+                    var transformers = _slice(arguments, 0);
+                    var tlen = transformers.length;
+                    return curry(arity(tlen, function () {
+                        var args = [], idx = -1;
+                        while (++idx &lt; tlen) {
+                            args.push(transformers[idx](arguments[idx]));
+                        }
+                        return fn.apply(this, args.concat(_slice(arguments, tlen)));
+                    }));
+                }
+            };
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#each">each</a></h1>
+        <h2>&lt;p&gt;Iterate over an input &lt;code&gt;list&lt;/code&gt;, calling a provided function &lt;code&gt;fn&lt;/code&gt; for each element in the&lt;br /&gt;list.&lt;/p&gt;&lt;p&gt;&lt;code&gt;fn&lt;/code&gt; receives one argument: &lt;em&gt;(value)&lt;/em&gt;.&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.each&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays), unlike&lt;br /&gt;the native &lt;code&gt;Array.prototype.forEach&lt;/code&gt; method. For more details on this behavior, see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach#Description&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Also note that, unlike &lt;code&gt;Array.prototype.forEach&lt;/code&gt;, Ramda&amp;#39;s &lt;code&gt;each&lt;/code&gt; returns the original&lt;br /&gt;array.&lt;/p&gt;<h2>
+        <pre>var each = R.each = function (fn, list) {
+            function _each(list) {
+                var idx = -1, len = list.length;
+                while (++idx &lt; len) {
+                    fn(list[idx]);
+                }
+                // i can&#x27;t bear not to return *something*
+                return list;
+            }
+            return arguments.length &lt; 2 ? _each : _each(list);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#idx">idx</a></h1>
+        <h2>&lt;p&gt;Like &lt;code&gt;each&lt;/code&gt;, but but passes additional parameters to the predicate function.&lt;/p&gt;&lt;p&gt;&lt;code&gt;fn&lt;/code&gt; receives three arguments: &lt;em&gt;(value, index, list)&lt;/em&gt;.&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.each.idx&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays),&lt;br /&gt;unlike the native &lt;code&gt;Array.prototype.forEach&lt;/code&gt; method. For more details on this behavior,&lt;br /&gt;see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/forEach#Description&lt;/a&gt;&lt;/p&gt;&lt;p&gt;Also note that, unlike &lt;code&gt;Array.prototype.forEach&lt;/code&gt;, Ramda&amp;#39;s &lt;code&gt;each&lt;/code&gt; returns the original&lt;br /&gt;array.&lt;/p&gt;<h2>
+        <pre>each.idx = function (fn, list) {
+            function _eachIdx(list) {
+                var idx = -1, len = list.length;
+                while (++idx &lt; len) {
+                    fn(list[idx], idx, list);
+                }
+                // i can&#x27;t bear not to return *something*
+                return list;
+            }
+            return arguments.length &lt; 2 ? _eachIdx : _eachIdx(list);
+        };
+
+        aliasFor(&quot;each&quot;).is(&quot;forEach&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#clone">clone</a></h1>
+        <h2>&lt;p&gt;Creates a shallow copy of an array.&lt;/p&gt;<h2>
+        <pre>var clone = R.clone = function(list) {
+            return _slice(list);
+        };
+
+        // Core Functions
+        // --------------
+        //<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#isEmpty">isEmpty</a></h1>
+        <h2>&lt;p&gt;Reports whether an array is empty.&lt;/p&gt;<h2>
+        <pre>var isEmpty = R.isEmpty = function (arr) {
+            return !arr || !arr.length;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#prepend">prepend</a></h1>
+        <h2>&lt;p&gt;Returns a new list with the given element at the front, followed by the contents of the&lt;br /&gt;list.&lt;/p&gt;<h2>
+        <pre>var prepend = R.prepend = function (el, arr) {
+            return concat([el], arr);
+        };
+
+        aliasFor(&quot;prepend&quot;).is(&quot;cons&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#head">head</a></h1>
+        <h2>&lt;p&gt;Returns the first element in a list.&lt;/p&gt;<h2>
+        <pre>var head = R.head = function (arr) {
+            arr = arr || [];
+            return arr[0];
+        };
+
+        aliasFor(&quot;head&quot;).is(&quot;car&quot;).and(&quot;first&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#last">last</a></h1>
+        <h2>&lt;p&gt;Returns the last element from a list.&lt;/p&gt;<h2>
+        <pre>R.last = function (arr) {
+            arr = arr || [];
+            return arr[arr.length - 1];
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#tail">tail</a></h1>
+        <h2>&lt;p&gt;Returns all but the first element of a list. If the list provided has the &lt;code&gt;tail&lt;/code&gt; method,&lt;br /&gt;it will instead return &lt;code&gt;list.tail()&lt;/code&gt;.&lt;/p&gt;<h2>
+        <pre>var tail = R.tail = function (arr) {
+            arr = arr || [];
+            if (hasMethod(&#x27;tail&#x27;, arr)) {
+                return arr.tail();
+            }
+            return (arr.length &gt; 1) ? _slice(arr, 1) : [];
+        };
+
+        aliasFor(&quot;tail&quot;).is(&quot;cdr&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#isAtom">isAtom</a></h1>
+        <h2>&lt;p&gt;Returns &lt;code&gt;true&lt;/code&gt; if the argument is an atom; &lt;code&gt;false&lt;/code&gt; otherwise. An atom is defined as any&lt;br /&gt;value that is not an array, &lt;code&gt;undefined&lt;/code&gt;, or &lt;code&gt;null&lt;/code&gt;.&lt;/p&gt;<h2>
+        <pre>R.isAtom = function (x) {
+            return x != null &amp;&amp; !isArray(x);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#append">append</a></h1>
+        <h2>&lt;p&gt;Returns a new list containing the contents of the given list, followed by the given&lt;br /&gt;element.&lt;/p&gt;<h2>
+        <pre>var append = R.append = function(el, list) {
+            return concat(list, [el]);
+        };
+
+        aliasFor(&quot;append&quot;).is(&quot;push&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#concat">concat</a></h1>
+        <h2>&lt;p&gt;Returns a new list consisting of the elements of the first list followed by the elements&lt;br /&gt;of the second.&lt;/p&gt;<h2>
+        <pre>R.concat = curry2(function(set1, set2) {
+            return (hasMethod(&#x27;concat&#x27;, set1)) ? set1.concat(set2) : concat(set1, set2);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#identity">identity</a></h1>
+        <h2>&lt;p&gt;A function that does nothing but return the parameter supplied to it. Good as a default&lt;br /&gt;or placeholder function.&lt;/p&gt;<h2>
+        <pre>var identity = R.identity = function (x) {
+            return x;
+        };
+
+        aliasFor(&quot;identity&quot;).is(&quot;I&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#times">times</a></h1>
+        <h2>&lt;p&gt;Calls an input function &lt;code&gt;n&lt;/code&gt; times, returning an array containing the results of those&lt;br /&gt;function calls.&lt;/p&gt;&lt;p&gt;&lt;code&gt;fn&lt;/code&gt; is passed one argument: The current value of &lt;code&gt;n&lt;/code&gt;, which begins at &lt;code&gt;0&lt;/code&gt; and is&lt;br /&gt;gradually incremented to &lt;code&gt;n - 1&lt;/code&gt;.&lt;/p&gt;<h2>
+        <pre>R.times = curry2(function (fn, n) {
+            var arr = new Array(n);
+            var i = -1;
+            while (++i &lt; n) {
+                arr[i] = fn(i);
+            }
+            return arr;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#repeatN">repeatN</a></h1>
+        <h2>&lt;p&gt;Returns a fixed list of size &lt;code&gt;n&lt;/code&gt; containing a specified identical value.&lt;/p&gt;<h2>
+        <pre>R.repeatN = curry2(function (value, n) {
+            return R.times(R.always(value), n);
+        });
+
+
+        // Function functions :-)
+        // ----------------------
+        //
+        // These functions make new functions out of old ones.<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#compose">compose</a></h1>
+        <h2>&lt;p&gt;Creates a new function that runs each of the functions supplied as parameters in turn,&lt;br /&gt;passing the return value of each function invocation to the next function invocation,&lt;br /&gt;beginning with whatever arguments were passed to the initial invocation.&lt;/p&gt;&lt;p&gt;Note that &lt;code&gt;compose&lt;/code&gt; is a right-associative function, which means the functions provided&lt;br /&gt;will be invoked in order from right to left. In the example &lt;code&gt;var h = compose(f, g)&lt;/code&gt;,&lt;br /&gt;the function &lt;code&gt;h&lt;/code&gt; is equivalent to &lt;code&gt;f( g(x) )&lt;/code&gt;, where &lt;code&gt;x&lt;/code&gt; represents the arguments&lt;br /&gt;originally passed to &lt;code&gt;h&lt;/code&gt;.&lt;/p&gt;<h2>
+        <pre>var compose = R.compose = function() {  // TODO: type check of arguments?
+            var length = arguments.length, func = arguments[--length];
+            if (!length) {
+                return partially(compose, func);
+            }
+            while (length--) {
+                func = internalCompose(arguments[length], func);
+            }
+            return func;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#pipe">pipe</a></h1>
+        <h2>&lt;p&gt;Creates a new function that runs each of the functions supplied as parameters in turn,&lt;br /&gt;passing the return value of each function invocation to the next function invocation,&lt;br /&gt;beginning with whatever arguments were passed to the initial invocation.&lt;/p&gt;&lt;p&gt;&lt;code&gt;pipe&lt;/code&gt; is the mirror version of &lt;code&gt;compose&lt;/code&gt;. &lt;code&gt;pipe&lt;/code&gt; is left-associative, which means that&lt;br /&gt;each of the functions provided is executed in order from left to right.&lt;/p&gt;<h2>
+        <pre>R.pipe = function() {  // TODO: type check of arguments?
+            if (arguments.length == 1) {
+                return partially (R.pipe, arguments[0]);
+            }
+            return compose.apply(this, _slice(arguments).reverse());
+        };
+        aliasFor(&quot;pipe&quot;).is(&quot;sequence&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#flip">flip</a></h1>
+        <h2>&lt;p&gt;Returns a new function much like the supplied one, except that the first two arguments&amp;#39;&lt;br /&gt;order is reversed.&lt;/p&gt;<h2>
+        <pre>var flip = R.flip = function (fn) {
+            return function (a, b) {
+                return arguments.length &lt; 2 ?
+                  function(b) { return fn.apply(this, [b, a].concat(_slice(arguments, 1))); } :
+                  fn.apply(this, [b, a].concat(_slice(arguments, 2)));
+            };
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#lPartial">lPartial</a></h1>
+        <h2>&lt;p&gt;Accepts as its arguments a function and any number of values and returns a function that,&lt;br /&gt;when invoked, calls the original function with all of the values prepended to the&lt;br /&gt;original function&amp;#39;s arguments list.&lt;/p&gt;<h2>
+        <pre>R.lPartial = function (fn<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;args&lt;/p&gt;<h2>
+        <pre>{
+            var args = _slice(arguments, 1);
+            return arity(Math.max(fn.length - args.length, 0), function () {
+                return fn.apply(this, concat(args, arguments));
+            });
+        };
+        aliasFor(&quot;lPartial&quot;).is(&quot;applyLeft&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#rPartial">rPartial</a></h1>
+        <h2>&lt;p&gt;Accepts as its arguments a function and any number of values and returns a function that,&lt;br /&gt;when invoked, calls the original function with all of the values appended to the original&lt;br /&gt;function&amp;#39;s arguments list.&lt;/p&gt;&lt;p&gt;Note that &lt;code&gt;rPartial&lt;/code&gt; is the opposite of &lt;code&gt;lPartial&lt;/code&gt;: &lt;code&gt;rPartial&lt;/code&gt; fills &lt;code&gt;fn&lt;/code&gt;&amp;#39;s arguments&lt;br /&gt;from the right to the left.&lt;/p&gt;<h2>
+        <pre>R.rPartial = function (fn) {
+            var args = _slice(arguments, 1);
+            return arity(Math.max(fn.length - args.length, 0), function() {
+                return fn.apply(this, concat(arguments, args));
+            });
+        };
+        aliasFor(&quot;rPartial&quot;).is(&quot;applyRight&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#memoize">memoize</a></h1>
+        <h2>&lt;p&gt;Creates a new function that, when invoked, caches the result of calling &lt;code&gt;fn&lt;/code&gt; for a given&lt;br /&gt;argument set and returns the result. Subsequent calls to the memoized &lt;code&gt;fn&lt;/code&gt; with the same&lt;br /&gt;argument set will not result in an additional call to &lt;code&gt;fn&lt;/code&gt;; instead, the cached result&lt;br /&gt;for that set of arguments will be returned.&lt;/p&gt;&lt;p&gt;Note that this version of &lt;code&gt;memoize&lt;/code&gt; effectively handles only string and number&lt;br /&gt;parameters.&lt;/p&gt;<h2>
+        <pre>R.memoize = function (fn) {
+            var cache = {};
+            return function () {
+                var position = foldl(function (cache, arg) {
+                        return cache[arg] || (cache[arg] = {});
+                    }, cache,
+                    _slice(arguments, 0, arguments.length - 1));
+                var arg = arguments[arguments.length - 1];
+                return (position[arg] || (position[arg] = fn.apply(this, arguments)));
+            };
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#once">once</a></h1>
+        <h2>&lt;p&gt;Accepts a function &lt;code&gt;fn&lt;/code&gt; and returns a function that guards invocation of &lt;code&gt;fn&lt;/code&gt; such that&lt;br /&gt;&lt;code&gt;fn&lt;/code&gt; can only ever be called once, no matter how many times the returned function is&lt;br /&gt;invoked.&lt;/p&gt;<h2>
+        <pre>R.once = function (fn) {
+            var called = false, result;
+            return function () {
+                if (called) {
+                    return result;
+                }
+                called = true;
+                result = fn.apply(this, arguments);
+                return result;
+            };
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#wrap">wrap</a></h1>
+        <h2>&lt;p&gt;Wrap a function inside another to allow you to make adjustments to the parameters, or do&lt;br /&gt;other processing either before the internal function is called or with its results.&lt;/p&gt;<h2>
+        <pre>R.wrap = function(fn, wrapper) {
+            return function() {
+                return wrapper.apply(this, concat([fn], arguments));
+            };
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#construct">construct</a></h1>
+        <h2>&lt;p&gt;Wraps a constructor function inside a curried function that can be called with the same&lt;br /&gt;arguments and returns the same type.&lt;/p&gt;<h2>
+        <pre>R.construct = function (Fn) {
+            var f = function () {
+                var obj = new Fn();
+                Fn.apply(obj, arguments);
+                return obj;
+            };
+            return Fn.length &gt; 1 ? curry(nAry(Fn.length, f)) : f;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#fork">fork</a></h1>
+        <h2>&lt;p&gt;Accepts three functions and returns a new function. When invoked, this new function will&lt;br /&gt;invoke the first function, &lt;code&gt;after&lt;/code&gt;, passing as its arguments the results of invoking the&lt;br /&gt;second and third functions with whatever arguments are passed to the new function.&lt;/p&gt;&lt;p&gt;For example, a function produced by &lt;code&gt;fork&lt;/code&gt; is equivalent to:&lt;/p&gt;&lt;pre&gt;&lt;code class=&quot;lang-javascript&quot;&gt;  var h = ramda.fork(e, f, g);
+  h(1, 2); //≅ e( f(1, 2), g(1, 2) )
+&lt;/code&gt;&lt;/pre&gt;
+<h2>
+        <pre>R.fork = function (after) {
+            var fns = _slice(arguments, 1);
+            return function () {
+                var args = arguments;
+                return after.apply(this, map(function (fn) {
+                    return fn.apply(this, args);
+                }, fns));
+            };
+        };
+
+        // List Functions
+        // --------------
+        //
+        // These functions operate on logical lists, here plain arrays.  Almost all of these are curried, and the list
+        // parameter comes last, so you can create a new function by supplying the preceding arguments, leaving the
+        // list parameter off.  For instance:
+        //
+        //     // skip third parameter
+        //     var checkAllPredicates = reduce(andFn, alwaysTrue);
+        //     // ... given suitable definitions of odd, lt20, gt5
+        //     var test = checkAllPredicates([odd, lt20, gt5]);
+        //     // test(7) =&gt; true, test(9) =&gt; true, test(10) =&gt; false,
+        //     // test(3) =&gt; false, test(21) =&gt; false,
+
+        // --------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#foldl">foldl</a></h1>
+        <h2>&lt;p&gt;Returns a single item by iterating through the list, successively calling the iterator&lt;br /&gt;function and passing it an accumulator value and the current value from the array, and&lt;br /&gt;then passing the result to the next call.&lt;/p&gt;&lt;p&gt;The iterator function receives two values: &lt;em&gt;(acc, value)&lt;/em&gt;&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.foldl&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays), unlike&lt;br /&gt;the native &lt;code&gt;Array.prototype.filter&lt;/code&gt; method. For more details on this behavior, see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&lt;/a&gt;&lt;/p&gt;<h2>
+        <pre>var foldl = R.foldl =  curry3(function(fn, acc, list) {
+            if (hasMethod(&#x27;foldl&#x27;, list)) {
+                return list.foldl(fn, acc);
+            }
+            var idx = -1, len = list.length;
+            while (++idx &lt; len) {
+                acc = fn(acc, list[idx]);
+            }
+            return acc;
+        });
+        aliasFor(&quot;foldl&quot;).is(&quot;reduce&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;Like &lt;code&gt;foldl&lt;/code&gt;, but passes additional parameters to the predicate function.&lt;/p&gt;&lt;p&gt;The iterator function receives four values: &lt;em&gt;(acc, value, index, list)&lt;/em&gt;&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.foldl.idx&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays),&lt;br /&gt;unlike the native &lt;code&gt;Array.prototype.filter&lt;/code&gt; method. For more details on this behavior,&lt;br /&gt;see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&lt;/a&gt;&lt;/p&gt;<h2>
+        <pre>R.foldl.idx = curry3(function(fn, acc, list) {
+            if (hasMethod(&#x27;foldl&#x27;, list)) {
+                return list.foldl(fn, acc);
+            }
+            var idx = -1, len = list.length;
+            while (++idx &lt; len) {
+                acc = fn(acc, list[idx], idx, list);
+            }
+            return acc;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#foldr">foldr</a></h1>
+        <h2>&lt;p&gt;Returns a single item by iterating through the list, successively calling the iterator&lt;br /&gt;function and passing it an accumulator value and the current value from the array, and&lt;br /&gt;then passing the result to the next call.&lt;/p&gt;&lt;p&gt;Similar to &lt;code&gt;foldl&lt;/code&gt;, except moves through the input list from the right to the left.&lt;/p&gt;&lt;p&gt;The iterator function receives two values: &lt;em&gt;(acc, value)&lt;/em&gt;&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.foldr&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays), unlike&lt;br /&gt;the native &lt;code&gt;Array.prototype.filter&lt;/code&gt; method. For more details on this behavior, see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&lt;/a&gt;&lt;/p&gt;<h2>
+        <pre>var foldr = R.foldr = curry3(function(fn, acc, list) {
+            if (hasMethod(&#x27;foldr&#x27;, list)) {
+                return list.foldr(fn, acc);
+            }
+            var idx = list.length;
+            while (idx--) {
+                acc = fn(acc, list[idx]);
+            }
+            return acc;
+        });
+        aliasFor(&quot;foldr&quot;).is(&quot;reduceRight&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;Like &lt;code&gt;foldr&lt;/code&gt;, but passes additional parameters to the predicate function. Moves through&lt;br /&gt;the input list from the right to the left.&lt;/p&gt;&lt;p&gt;The iterator function receives four values: &lt;em&gt;(acc, value, index, list)&lt;/em&gt;.&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.foldr.idx&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays),&lt;br /&gt;unlike the native &lt;code&gt;Array.prototype.filter&lt;/code&gt; method. For more details on this behavior,&lt;br /&gt;see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/reduce#Description&lt;/a&gt;&lt;/p&gt;<h2>
+        <pre>R.foldr.idx = curry3(function (fn, acc, list) {
+            if (hasMethod(&#x27;foldr&#x27;, list)) {
+                return list.foldr(fn, acc);
+            }
+            var idx = list.length;
+            while (idx--) {
+                acc = fn(acc, list[idx], idx, list);
+            }
+            return acc;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#unfoldr">unfoldr</a></h1>
+        <h2>&lt;p&gt;Builds a list from a seed value. Accepts an iterator function, which returns either false&lt;br /&gt;to stop iteration or an array of length 2 containing the value to add to the resulting&lt;br /&gt;list and the seed to be used in the next call to the iterator function.&lt;/p&gt;&lt;p&gt;The iterator function receives one argument: &lt;em&gt;(seed)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>R.unfoldr = curry2(function (fn, seed) {
+            var pair = fn(seed);
+            var result = [];
+            while (pair &amp;&amp; pair.length) {
+                result.push(pair[0]);
+                pair = fn(pair[1]);
+            }
+            return result;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#map">map</a></h1>
+        <h2>&lt;p&gt;Returns a new list, constructed by applying the supplied function to every element of the&lt;br /&gt;supplied list.&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.map&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays), unlike the&lt;br /&gt;native &lt;code&gt;Array.prototype.map&lt;/code&gt; method. For more details on this behavior, see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map#Description&lt;/a&gt;&lt;/p&gt;<h2>
+        <pre>function map(fn, list) {
+            if (hasMethod(&#x27;map&#x27;, list)) {
+                return list.map(fn);
+            }
+            var idx = -1, len = list.length, result = new Array(len);
+            while (++idx &lt; len) {
+                result[idx] = fn(list[idx]);
+            }
+            return result;
+        }
+        R.map = curry2(map);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;Like &lt;code&gt;map&lt;/code&gt;, but but passes additional parameters to the predicate function.&lt;/p&gt;&lt;p&gt;&lt;code&gt;fn&lt;/code&gt; receives three arguments: &lt;em&gt;(value, index, list)&lt;/em&gt;.&lt;/p&gt;&lt;p&gt;Note: &lt;code&gt;ramda.map.idx&lt;/code&gt; does not skip deleted or unassigned indices (sparse arrays), unlike&lt;br /&gt;the native &lt;code&gt;Array.prototype.map&lt;/code&gt; method. For more details on this behavior, see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/map#Description&lt;/a&gt;&lt;/p&gt;<h2>
+        <pre>R.map.idx = curry2(function(fn, list) {
+            if (hasMethod(&#x27;map&#x27;, list)) {
+                return list.map(fn);
+            }
+            var idx = -1, len = list.length, result = new Array(len);
+            while (++idx &lt; len) {
+                result[idx] = fn(list[idx], idx, list);
+            }
+            return result;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;Map, but for objects. Creates an object with the same keys as &lt;code&gt;obj&lt;/code&gt; and values&lt;br /&gt;generated by running each property of &lt;code&gt;obj&lt;/code&gt; through &lt;code&gt;fn&lt;/code&gt;. &lt;code&gt;fn&lt;/code&gt; is passed one argument:&lt;br /&gt;&lt;em&gt;(value)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>// TODO: consider mapObj.key in parallel with mapObj.idx.  Also consider folding together with &#x60;map&#x60; implementation.
+        R.mapObj = curry2(function (fn, obj) {
+            return foldl(function (acc, key) {
+                acc[key] = fn(obj[key]);
+                return acc;
+            }, {}, keys(obj));
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#idx">idx</a></h1>
+        <h2>&lt;p&gt;Like &lt;code&gt;mapObj&lt;/code&gt;, but but passes additional arguments to the predicate function. The&lt;br /&gt;predicate function is passed three arguments: &lt;em&gt;(value, key, obj)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>R.mapObj.idx = function (fn, obj) {
+            function _mapObjIdx(obj) {
+                return foldl(function (acc, key) {
+                    acc[key] = fn(obj[key], key, obj);
+                    return acc;
+                }, {}, keys(obj));
+            }
+            return arguments.length &lt; 2 ? _mapObjIdx : _mapObjIdx(obj);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#size">size</a></h1>
+        <h2>&lt;p&gt;Returns the number of elements in the array by returning &lt;code&gt;arr.length&lt;/code&gt;.&lt;/p&gt;<h2>
+        <pre>R.size = function (arr) {
+            return arr.length;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#filter">filter</a></h1>
+        <h2>&lt;p&gt;Returns a new list containing only those items that match a given predicate function.&lt;br /&gt;The predicate function is passed one argument: &lt;em&gt;(value)&lt;/em&gt;.&lt;/p&gt;&lt;p&gt;Note that &lt;code&gt;ramda.filter&lt;/code&gt; does not skip deleted or unassigned indices, unlike the native&lt;br /&gt;&lt;code&gt;Array.prototype.filter&lt;/code&gt; method. For more details on this behavior, see:&lt;br /&gt;&lt;a href=&quot;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter#Description&quot;&gt;https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/filter#Description&lt;/a&gt;&lt;/p&gt;<h2>
+        <pre>var filter = function(fn, list) {
+            if (hasMethod(&#x27;filter&#x27;, list)) {
+                return list.filter(fn);
+            }
+            var idx = -1, len = list.length, result = [];
+            while (++idx &lt; len) {
+                if (fn(list[idx])) {
+                    result.push(list[idx]);
+                }
+            }
+            return result;
+        };
+
+        R.filter = curry2(filter);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#filterIdx">filterIdx</a></h1>
+        <h2>&lt;p&gt;Like &lt;code&gt;filter&lt;/code&gt;, but passes additional parameters to the predicate function. The predicate&lt;br /&gt;function is passed three arguments: &lt;em&gt;(value, index, list)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>var filterIdx = function(fn, list) {
+            if (hasMethod(&#x27;filter&#x27;, list)) {
+                return list.filter(fn);
+            }
+            var idx = -1, len = list.length, result = [];
+            while (++idx &lt; len) {
+                if (fn(list[idx], idx, list)) {
+                    result.push(list[idx]);
+                }
+            }
+            return result;
+        };
+
+        R.filter.idx = curry2(filterIdx);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#reject">reject</a></h1>
+        <h2>&lt;p&gt;Similar to &lt;code&gt;filter&lt;/code&gt;, except that it keeps only values for which the given predicate&lt;br /&gt;function returns falsy. The predicate function is passed one argument: &lt;em&gt;(value)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>var reject = function(fn, list) {
+            return filter(not(fn), list);
+        };
+
+        R.reject = curry2(reject);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;Like &lt;code&gt;reject&lt;/code&gt;, but passes additional parameters to the predicate function. The predicate&lt;br /&gt;function is passed three arguments: &lt;em&gt;(value, index, list)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>R.reject.idx = curry2(function(fn, list) {
+            return filterIdx(not(fn), list);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#takeWhile">takeWhile</a></h1>
+        <h2>&lt;p&gt;Returns a new list containing the first &lt;code&gt;n&lt;/code&gt; elements of a given list, passing each value&lt;br /&gt;to the supplied predicate function, and terminating when the predicate function returns&lt;br /&gt;&lt;code&gt;false&lt;/code&gt;. Excludes the element that caused the predicate function to fail. The predicate&lt;br /&gt;function is passed one argument: &lt;em&gt;(value)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>R.takeWhile = curry2(function(fn, list) {
+            if (hasMethod(&#x27;takeWhile&#x27;, list)) {
+                return list.takeWhile(fn);
+            }
+            var idx = -1, len = list.length;
+            while (++idx &lt; len &amp;&amp; fn(list[idx])) {}
+            return _slice(list, 0, idx);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#take">take</a></h1>
+        <h2>&lt;p&gt;Returns a new list containing the first &lt;code&gt;n&lt;/code&gt; elements of the given list.  If&lt;br /&gt;&lt;code&gt;n &amp;gt; * list.length&lt;/code&gt;, returns a list of &lt;code&gt;list.length&lt;/code&gt; elements.&lt;/p&gt;<h2>
+        <pre>R.take = curry2(function(n, list) {
+            if (hasMethod(&#x27;take&#x27;, list)) {
+                return list.take(n);
+            }
+            var ls = clone(list);
+            ls.length = Math.min(n, list.length);
+            return ls;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#skipUntil">skipUntil</a></h1>
+        <h2>&lt;p&gt;Returns a new list containing the last &lt;code&gt;n&lt;/code&gt; elements of a given list, passing each value&lt;br /&gt;to the supplied predicate function, beginning when the predicate function returns&lt;br /&gt;&lt;code&gt;true&lt;/code&gt;. Excludes the element that caused the predicate function to fail. The predicate&lt;br /&gt;function is passed one argument: &lt;em&gt;(value)&lt;/em&gt;.&lt;/p&gt;<h2>
+        <pre>R.skipUntil = curry2(function (fn, list) {
+            var idx = -1, len = list.length;
+            while (++idx &lt; len &amp;&amp; !fn(list[idx])) {}
+            return _slice(list, idx);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#skip">skip</a></h1>
+        <h2>&lt;p&gt;Returns a new list containing all but the first &lt;code&gt;n&lt;/code&gt; elements of the given &lt;code&gt;list&lt;/code&gt;.&lt;/p&gt;<h2>
+        <pre>R.skip = curry2(function(n, list) {
+            if (hasMethod(&#x27;skip&#x27;, list)) {
+                return list.skip(n);
+            }
+            return _slice(list, n);
+        });
+        aliasFor(&#x27;skip&#x27;).is(&#x27;drop&#x27;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the first element of the list which matches the predicate, or &#x60;undefined&#x60; if no element matches.
+        R.find = function (fn, list) {
+            function _find(list) {
+                var idx = -1;
+                var len = list.length;
+                while (++idx &lt; len) {
+                    if (fn(list[idx])) {
+                        return list[idx];
+                    }
+                }
+                return undef;
+            }
+            return arguments.length &lt; 2 ? _find : _find(list);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the index of first element of the list which matches the predicate, or &#x60;undefined&#x60; if no element matches.
+        R.findIndex = curry2(function(fn, list) {
+            var idx = -1;
+            var len = list.length;
+            while (++idx &lt; len) {
+                if (fn(list[idx])) {
+                    return idx;
+                }
+            }
+            return -1;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the last element of the list which matches the predicate, or &#x60;undefined&#x60; if no element matches.
+        R.findLast = curry2(function(fn, list) {
+            var idx = list.length;
+            while (--idx) {
+                if (fn(list[idx])) {
+                    return list[idx];
+                }
+            }
+            return undef;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the index of last element of the list which matches the predicate, or &#x60;undefined&#x60; if no element matches.
+        R.findLastIndex = curry2(function(fn, list) {
+            var idx = list.length;
+            while (--idx) {
+                if (fn(list[idx])) {
+                    return idx;
+                }
+            }
+            return -1;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns &#x60;true&#x60; if all elements of the list match the predicate, &#x60;false&#x60; if there are any that don&#x27;t.
+        var all = function(fn, list) {
+            var i = -1;
+            while (++i &lt; list.length) {
+                if (!fn(list[i])) {
+                    return false;
+                }
+            }
+            return true;
+        };
+        R.all = curry2(all);
+        aliasFor(&quot;all&quot;).is(&quot;every&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns &#x60;true&#x60; if any elements of the list match the predicate, &#x60;false&#x60; if none do.
+        var any = function (fn, list) {
+            var i = -1;
+            while (++i &lt; list.length) {
+                if (fn(list[i])) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        R.any = curry2(any);
+        aliasFor(&quot;any&quot;).is(&quot;some&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Internal implementations of indexOf and lastIndexOf
+
+        // Return the position of the first occurrence of an item in an array,
+        // or -1 if the item is not included in the array.
+        var indexOf = function(array, item, from) {
+            var i = 0, length = array.length;
+            if (typeof from == &#x27;number&#x27;) {
+                i = from &lt; 0 ? Math.max(0, length + from) : from;
+            }
+            for (; i &lt; length; i++) {
+                if (array[i] === item) return i;
+            }
+            return -1;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#lastIndexOf">lastIndexOf</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>var lastIndexOf = function(array, item, from) {
+            var idx = array.length;
+            if (typeof from == &#x27;number&#x27;) {
+                idx = from &lt; 0 ? idx + from + 1 : Math.min(idx, from + 1);
+            }
+            while (--idx &gt;= 0) {
+                if (array[idx] === item) return idx;
+            }
+            return -1;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the first zero-indexed position of an object in a flat list
+        R.indexOf = curry2(function _indexOf(target, list) {
+            return indexOf(list, target);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>R.indexOf.from = curry3(function indexOfFrom(target, fromIdx, list) {
+            return indexOf(list, target, fromIdx);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the last zero-indexed position of an object in a flat list
+        R.lastIndexOf = curry2(function _lastIndexOf(target, list) {
+            return lastIndexOf(list, target);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>R.lastIndexOf.from = curry3(function lastIndexOfFrom(target, fromIdx, list) {
+            return lastIndexOf(list, target, fromIdx);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns &#x60;true&#x60; if the list contains the sought element, &#x60;false&#x60; if it does not.  Equality is strict here,
+        // meaning reference equality for objects and non-coercing equality for primitives.
+        function contains(a, list) {
+            return indexOf(list, a) &gt; -1;
+        }
+        R.contains = curry2(contains);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns &#x60;true&#x60; if the list contains the sought element, &#x60;false&#x60; if it does not, based upon the value
+        // returned by applying the supplied predicated to two list elements.  Equality is strict here, meaning
+        // reference equality for objects and non-coercing equality for primitives.  Probably inefficient.
+        var containsWith = function (pred, x, list) {
+            var idx = -1, len = list.length;
+            while (++idx &lt; len) {
+                if (pred(x, list[idx])) {
+                    return true;
+                }
+            }
+            return false;
+        };
+        R.containsWith = curry3(containsWith);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a new list containing only one copy of each element in the original list.  Equality is strict here,
+        // meaning reference equality for objects and non-coercing equality for primitives.
+
+        var uniq = R.uniq = function uniq(list) {
+            var idx = -1, len = list.length;
+            var result = [], item;
+            while (++idx &lt; len) {
+                item = list[idx];
+                if (!contains(item, result)) {
+                    result.push(item);
+                }
+            }
+            return result;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// returns &#x60;true&#x60; if all of the elements in the &#x60;list&#x60; are unique.
+        R.isSet = function (list) {
+            var len = list.length;
+            var i = -1;
+            while (++i &lt; len) {
+                if (indexOf(list, list[i], i+1) &gt;= 0) {
+                    return false;
+                }
+            }
+            return true;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a new list containing only one copy of each element in the original list, based upon the value
+        // returned by applying the supplied predicate to two list elements.   Equality is strict here,  meaning
+        // reference equality for objects and non-coercing equality for primitives.
+        var uniqWith = R.uniqWith = curry2(function(pred, list) {
+            var idx = -1, len = list.length;
+            var result = [], item;
+            while (++idx &lt; len) {
+                item = list[idx];
+                if (!containsWith(pred, item, result)) {
+                    result.push(item);
+                }
+            }
+            return result;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a new list by plucking the same named property off all objects in the list supplied.
+        var pluck = R.pluck = curry2(function(p, list) {
+            return map(prop(p), list);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a list that contains a flattened version of the supplied list.  For example:
+        //
+        //     flatten([1, 2, [3, 4], 5, [6, [7, 8, [9, [10, 11], 12]]]]);
+        //     // =&gt; [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+        var flatten = R.flatten = function(list) {
+            var output = [], idx = 0, value;
+            for (var i = 0, length = list.length; i &lt; length; i++) {
+              value = list[i];
+              if (isArray(value)) {
+                //flatten current level of array or arguments object
+                value = flatten(value);
+                var j = 0, len = value.length;
+                output.length += len;
+                while (j &lt; len) {
+                  output[idx++] = value[j++];
+                }
+              } else {
+                output[idx++] = value;
+              }
+            }
+            return output;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Creates a new list out of the two supplied by applying the function to each equally-positioned pair in the
+        // lists.  For example,
+        //
+        //     zipWith(f, [1, 2, 3], [&#x27;a&#x27;, &#x27;b&#x27;, &#x27;c&#x27;])
+        //     //    =&gt; [f(1, &#x27;a&#x27;), f(2, &#x27;b&#x27;), f(3, &#x27;c&#x27;)];
+        //
+        // Note that the output list will only be as long as the length of the shorter input list.
+        R.zipWith = curry3(function(fn, a, b) {
+            var rv = [], i = -1, len = Math.min(a.length, b.length);
+            while (++i &lt; len) {
+                rv[i] = fn(a[i], b[i]);
+            }
+            return rv;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Creates a new list out of the two supplied by yielding the pair of each equally-positioned pair in the
+        // lists.  For example,
+        //
+        //     zip([1, 2, 3], [&#x27;a&#x27;, &#x27;b&#x27;, &#x27;c&#x27;])
+        //     //    =&gt; [[1, &#x27;a&#x27;], [2, &#x27;b&#x27;], [3, &#x27;c&#x27;]];
+        R.zip = curry2(function(a, b) { // = zipWith(prepend);
+            var rv = [];
+            var i = -1;
+            var len = Math.min(a.length, b.length);
+            while (++i &lt; len) {
+                rv[i] = [a[i], b[i]];
+            }
+            return rv;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Creates a new list out of the two supplied by applying the function to each possible pair in the lists.
+        //  For example,
+        //
+        //     xProdWith(f, [1, 2], [&#x27;a&#x27;, &#x27;b&#x27;])
+        //     //    =&gt; [f(1, &#x27;a&#x27;), f(1, &#x27;b&#x27;), f(2, &#x27;a&#x27;), f(2, &#x27;b&#x27;)];
+        R.xprodWith = curry3(function (fn, a, b) {
+            if (isEmpty(a) || isEmpty(b)) {
+                return [];
+            }
+            var i = -1, ilen = a.length, j, jlen = b.length, result = []; // better to push them all or to do &#x60;new Array(ilen * jlen)&#x60; and calculate indices?
+            while (++i &lt; ilen) {
+                j = -1;
+                while (++j &lt; jlen) {
+                    result.push(fn(a[i], b[j]));
+                }
+            }
+            return result;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Creates a new list out of the two supplied by yielding the pair of each possible pair in the lists.
+        // For example,
+        //
+        //     xProd([1, 2], [&#x27;a&#x27;, &#x27;b&#x27;])
+        //     //    =&gt; [[1, &#x27;a&#x27;], [1, &#x27;b&#x27;)], [2, &#x27;a&#x27;], [2, &#x27;b&#x27;]];
+        R.xprod = curry2(function (a, b) { // = xprodWith(prepend); (takes about 3 times as long...)
+            if (isEmpty(a) || isEmpty(b)) {
+                return [];
+            }
+            var i = -1;
+            var ilen = a.length;
+            var j;
+            var jlen = b.length;
+            var result = []; // better to push them all or to do &#x60;new Array(ilen * jlen)&#x60; and calculate indices?
+            while (++i &lt; ilen) {
+                j = -1;
+                while (++j &lt; jlen) {
+                    result.push([a[i], b[j]]);
+                }
+            }
+            return result;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a new list with the same elements as the original list, just in the reverse order.
+        R.reverse = function (list) {
+            return clone(list || []).reverse();
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// // Returns a list of numbers from &#x60;from&#x60; (inclusive) to &#x60;to&#x60; (exclusive).
+        // For example,
+        //
+        //     range(1, 5) // =&gt; [1, 2, 3, 4]
+        //     range(50, 53) // =&gt; [50, 51, 52]
+        R.range = curry2(function (from, to) {
+            if (from &gt;= to) {
+                return [];
+            }
+            var idx = 0, result = new Array(Math.floor(to) - Math.ceil(from));
+            for (; from &lt; to; idx++, from++) {
+                result[idx] = from;
+            }
+            return result;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the elements of the list as a string joined by a separator.
+        R.join = invoker(&quot;join&quot;, Array.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns the sublist of a list starting with the first index and
+        // ending before the second one.
+        R.slice = invoker(&quot;slice&quot;, Array.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>R.slice.from = flip(R.slice)(undef);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Removes the sub-list of &#x60;list&#x60; starting at index &#x60;start&#x60; and containing
+        // &#x60;count&#x60; elements.  _Note that this is not destructive_: it returns a
+        // copy of the list with the changes.
+        // &lt;small&gt;No lists have been harmed in the application of this function.&lt;/small&gt;
+        R.remove = curry3(function(start, count, list) {
+            return concat(_slice(list, 0, Math.min(start, list.length)), _slice(list, Math.min(list.length, start + count)));
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Inserts the supplied element into the list, at index &#x60;index&#x60;.  _Note
+        // that this is not destructive_: it returns a copy of the list with the changes.
+        // &lt;small&gt;No lists have been harmed in the application of this function.&lt;/small&gt;
+        R.insert = curry3(function(index, elt, list) {
+            index = index &lt; list.length &amp;&amp; index &gt;= 0 ? index : list.length;
+            return concat(append(elt, _slice(list, 0, index)), _slice(list, index));
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Inserts the sub-list into the list, at index &#x60;index&#x60;.  _Note  that this
+        // is not destructive_: it returns a copy of the list with the changes.
+        // &lt;small&gt;No lists have been harmed in the application of this function.&lt;/small&gt;
+        R.insert.all = curry3(function(index, elts, list) {
+            index = index &lt; list.length &amp;&amp; index &gt;= 0 ? index : list.length;
+            return concat(concat(_slice(list, 0, index), elts), _slice(list, index));
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Makes a comparator function out of a function that reports whether the first element is less than the second.
+        //
+        //     var cmp = comparator(function(a, b) {
+        //         return a.age &lt; b.age;
+        //     };
+        //     sort(cmp, people);
+        var comparator = R.comparator = function(pred) {
+            return function (a, b) {
+                return pred(a, b) ? -1 : pred(b, a) ? 1 : 0;
+            };
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a copy of the list, sorted according to the comparator function, which should accept two values at a
+        // time and return a negative number if the first value is smaller, a positive number if it&#x27;s larger, and zero
+        // if they are equal.  Please note that this is a **copy** of the list.  It does not modify the original.
+        var sort = R.sort = function(comparator, list) {
+            return arguments.length &lt; 2 ?
+                function _sort(list) { return clone(list).sort(comparator); } :
+                clone(list).sort(comparator);
+        };
+
+        // Splits a list into sublists stored in an object, based on the result of calling a String-returning function
+        // on each element, and grouping the results according to values returned.
+        //
+        //     var byGrade = partition(function(student) {
+        //         var score = student.score
+        //         return (score &lt; 65) ? &#x27;F&#x27; : (score &lt; 70) ? &#x27;D&#x27; :
+        //                (score &lt; 80) ? &#x27;C&#x27; : (score &lt; 90) ? &#x27;B&#x27; : &#x27;A&#x27;;
+        //     };
+        //     var students = [{name: &quot;Abby&quot;, score: 84} /*, ... */,
+        //                     {name: &#x27;Jack&#x27;, score: 69}];
+        //     byGrade(students);
+        //     //=&gt; {
+        //     //   &quot;A&quot;: [{name: &#x27;Dianne&#x27;, score: 99} /*, ... */],
+        //     //   &quot;B&quot;: [{name: &quot;Abby&quot;, score: 84} /*, ... */]
+        //     //   /*, ... */
+        //     //   &quot;F&quot;: [{name: &#x27;Eddy&#x27;, score: 58}]
+        //     // }<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#partition">partition</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>R.partition = curry2(function (fn, list) {
+            return foldl(function (acc, elt) {
+                var key = fn(elt);
+                acc[key] = append(elt, acc[key] || (acc[key] = []));
+                return acc;
+            }, {}, list);
+        });
+        aliasFor(&quot;partition&quot;).is(&quot;groupBy&quot;);
+
+        // Object Functions
+        // ----------------
+        //
+        // These functions operate on plain Javascript object, adding simple functions to test properties on these
+        // objects.  Many of these are of most use in conjunction with the list functions, operating on lists of
+        // objects.
+
+        // --------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Runs the given function with the supplied object, then returns the object.
+        R.tap = curry2(function(x, fn) {
+            if (typeof fn === &quot;function&quot;) { fn(x); }
+            return x;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Tests if two items are equal.  Equality is strict here, meaning reference equality for objects and
+        // non-coercing equality for primitives.
+        R.eq = function (a, b) {
+            return arguments.length &lt; 2 ? function _eq(b) { return a === b; } : a === b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a function that when supplied an object returns the indicated property of that object, if it exists.
+        var prop = R.prop = function (p, obj) {
+            return arguments.length &lt; 2 ? function _prop(obj) { return obj[p]; } :  obj[p];
+        };
+        aliasFor(&quot;prop&quot;).is(&quot;nth&quot;).and(&quot;get&quot;); // TODO: are we sure?  Matches some other libs, but might want to reserve for other use.<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a function that when supplied an object returns the result of running the indicated function on
+        // that object, if it has such a function.
+        R.func = function (fn, obj) {
+            function _func(obj) {
+                return obj[fn].apply(obj, _slice(arguments, 1));
+            }
+            return arguments.length &lt; 2 ? _func : _func(obj);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a function that when supplied a property name returns that property on the indicated object, if it
+        // exists.
+        R.props = function (obj, prop) {
+            return arguments.length &lt; 2 ? function _props(prop) { return obj &amp;&amp; obj[prop]; } : obj &amp;&amp; obj[prop];
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a function that always returns the given value.
+        var always = R.always = function (val) {
+            return function () {
+                return val;
+            };
+        };
+        aliasFor(&quot;always&quot;).is(&quot;constant&quot;).and(&quot;K&quot;);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#anyBlanks">anyBlanks</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>var anyBlanks = R.any(function (val) {
+            return val === null || val === undef;
+        });
+
+        var hasOwnProperty = Object.prototype.hasOwnProperty;
+        var nativeKeys = Object.keys;<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a list containing the names of all the enumerable own
+        // properties of the supplied object.
+        var keys = R.keys = function (obj) {
+            if (nativeKeys) return nativeKeys(Object(obj));
+            var prop, ks = [];
+            for (prop in obj) {
+                if (hasOwnProperty.call(obj, prop)) {
+                    ks.push(prop);
+                }
+            }
+            return ks;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a list containing the names of all the
+        // properties of the supplied object, including prototype properties.
+        R.keysIn = function (obj) {
+            var prop, ks = [];
+            for (prop in obj) {
+                ks.push(prop);
+            }
+            return ks;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a list of all the enumerable own properties of the supplied object.
+        R.values = function (obj) {
+            var prop, props = keys(obj),
+                length = props.length,
+                vals = new Array(length);
+            for (var i = 0; i &lt; length; i++) {
+                vals[i] = obj[props[i]];
+            }
+            return vals;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a list of all the properties, including prototype properties,
+        // of the supplied object.
+        R.valuesIn = function (obj) {
+            var prop, vs = [];
+            for (prop in obj) {
+                vs.push(obj[prop]);
+            }
+            return vs;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// internal helper function
+        function pickWith(test, obj) {
+            var copy = {},
+                props = keys(obj), prop, val;
+            for (var i = 0, len = props.length; i &lt; len; i++) {
+                prop = props[i];
+                val = obj[prop];
+                if (test(val, prop, obj)) {
+                    copy[prop] = val;
+                }
+            }
+            return copy;
+        }<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a partial copy of an object containing only the keys specified.  If the key does not exist, the
+        // property is ignored
+        R.pick = curry2(function pick(names, obj) {
+            return pickWith(function(val, key) {
+                return contains(key, names);
+            }, obj);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns a partial copy of an object omitting the keys specified.
+        R.omit = curry2(function omit(names, obj) {
+            return pickWith(function(val, key) {
+                return !contains(key, names);
+            }, obj);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#pickWith">pickWith</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>R.pickWith = curry2(pickWith);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Similar to &#x60;pick&#x60; except that this one includes a &#x60;key: undefined&#x60; pair for properties that don&#x27;t exist.
+        var pickAll = function (names, obj) {
+            var copy = {};
+            each(function (name) {
+                copy[name] = obj[name];
+            }, names);
+            return copy;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#pickAll">pickAll</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>R.pickAll = curry2(pickAll);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#mixin">mixin</a></h1>
+        <h2>&lt;p&gt;Create a new object with the own properties of a&lt;br /&gt;merged with the own properties of object b.&lt;/p&gt;<h2>
+        <pre>R.mixin = curry2(function(a, b) {
+            return extend(extend({}, a), b);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Reports whether two functions have the same value for the specified property.  Useful as a curried predicate.
+        R.eqProps = function (prop, obj1, obj2) {
+            var f1 = function eqPropsCurried1(obj1, obj2) {
+                var f2 = function eqPropsCurried2(obj2) {
+                    return obj1[prop] === obj2[prop];
+                };
+                return arguments.length &lt; 2 ? f2 : f2(obj2);
+            };
+            return arguments.length &lt; 2 ? f1 :
+                arguments.length &lt; 3 ? f1(obj1) :
+                    f1(obj1, obj2);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// internal helper for &#x60;where&#x60;
+        function satisfiesSpec(spec, parsedSpec, testObj) {
+            if (spec === testObj) { return true; }
+            if (testObj == null) { return false; }
+            parsedSpec.fn = parsedSpec.fn || [];
+            parsedSpec.obj = parsedSpec.obj || [];
+            var key, val, i = -1, fnLen = parsedSpec.fn.length, j = -1, objLen = parsedSpec.obj.length;
+            while (++i &lt; fnLen) {
+                key = parsedSpec.fn[i];
+                val = spec[key];
+                //if (!hasOwnProperty.call(testObj, key)) {
+                //    return false;
+                //}
+                if (!(key in testObj)) {
+                    return false;
+                }
+                if (!val(testObj[key], testObj)) {
+                    return false;
+                }
+            }
+            while (++j &lt; objLen) {
+                key = parsedSpec.obj[j];
+                if (spec[key] !== testObj[key]) {
+                    return false;
+                }
+            }
+            return true;
+        }<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// &#x60;where&#x60; takes a spec object and a test object and returns true if the test satisfies the spec.
+        // Any property on the spec that is not a function is interpreted as an equality
+        // relation. For example:
+        //
+        //     var spec = {x: 2};
+        //     where(spec, {w: 10, x: 2, y: 300}); // =&gt; true, x === 2
+        //     where(spec, {x: 1, y: &#x27;moo&#x27;, z: true}); // =&gt; false, x !== 2
+        //
+        // If the spec has a property mapped to a function, then &#x60;where&#x60; evaluates the function, passing in
+        // the test object&#x27;s value for the property in question, as well as the whole test object. For example:
+        //
+        //     var spec = {x: function(val, obj) { return  val + obj.y &gt; 10; };
+        //     where(spec, {x: 2, y: 7}); // =&gt; false
+        //     where(spec, {x: 3, y: 8}); // =&gt; true
+        //
+        // &#x60;where&#x60; is well suited to declarativley expressing constraints for other functions, e.g., &#x60;filter&#x60;:
+        //
+        //     var xs = [{x: 2, y: 1}, {x: 10, y: 2},
+        //               {x: 8, y: 3}, {x: 10, y: 4}];
+        //     var fxs = filter(where({x: 10}), xs);
+        //     // fxs ==&gt; [{x: 10, y: 2}, {x: 10, y: 4}]
+        //
+        R.where = function where(spec, testObj) {
+            var parsedSpec = R.partition(function(key) {
+                    return typeof spec[key] === &quot;function&quot; ? &quot;fn&quot; : &quot;obj&quot;;
+                }, keys(spec)
+            );
+            switch (arguments.length) {
+                case 0: throw NO_ARGS_EXCEPTION;
+                case 1:
+                    return function(testObj) {
+                        return satisfiesSpec(spec, parsedSpec, testObj);
+                    };
+            }
+            return satisfiesSpec(spec, parsedSpec, testObj);
+        };
+
+        // Miscellaneous Functions
+        // -----------------------
+        //
+        // A few functions in need of a good home.
+
+        // --------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Expose the functions from ramda as properties on another object.  If the passed-in object is the
+        // global object, or the passed-in object is &quot;falsy&quot;, then the ramda functions become global functions.
+        R.installTo = function(obj) {
+            return extend(obj || global, R);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A function that always returns &#x60;0&#x60;.
+        R.alwaysZero = always(0);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A function that always returns &#x60;false&#x60;.
+        R.alwaysFalse = always(false);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A function that always returns &#x60;true&#x60;.
+        R.alwaysTrue = always(true);
+
+
+
+        // Logic Functions
+        // ---------------
+        //
+        // These functions are very simple wrappers around the built-in logical operators, useful in building up
+        // more complex functional forms.
+
+        // --------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A function wrapping calls to the two functions in an &#x60;&amp;&amp;&#x60; operation, returning &#x60;true&#x60; or &#x60;false&#x60;.  Note that
+        // this is short-circuited, meaning that the second function will not be invoked if the first returns a false-y
+        // value.
+        R.and = function(f, g) {
+           function _and(g) {
+               return function() {return !!(f.apply(this, arguments) &amp;&amp; g.apply(this, arguments));};
+           }
+            return arguments.length &lt; 2 ? _and : _and(g);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A function wrapping calls to the two functions in an &#x60;||&#x60; operation, returning &#x60;true&#x60; or &#x60;false&#x60;.  Note that
+        // this is short-circuited, meaning that the second function will not be invoked if the first returns a truth-y
+        // value. (Note also that at least Oliver Twist can pronounce this one...)
+        R.or = function(f, g) { // TODO: arity?
+           function _or(g) {
+               return function() {return !!(f.apply(this, arguments) || g.apply(this, arguments));};
+           }
+            return arguments.length &lt; 2 ? _or : _or(g);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A function wrapping a call to the given function in a &#x60;!&#x60; operation.  It will return &#x60;true&#x60; when the
+        // underlying function would return a false-y value, and &#x60;false&#x60; when it would return a truth-y one.
+        var not = R.not = function (f) {
+            return function() {return !f.apply(this, arguments);};
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Create a predicate wrapper which will call a pick function (all/any) for each predicate
+        var predicateWrap = function(predPicker) {
+            return function(preds<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;, args&lt;/p&gt;<h2>
+        <pre>{
+                var predIterator = function() {
+                    var args = arguments;
+                    return predPicker(function(predicate) {
+                        return predicate.apply(null, args);
+                    }, preds);
+                };
+                return arguments.length &gt; 1 ?
+                        // Call function imediately if given arguments
+                        predIterator.apply(null, _slice(arguments, 1)) :
+                        // Return a function which will call the predicates with the provided arguments
+                        arity(max(pluck(&quot;length&quot;, preds)), predIterator);
+            };
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Given a list of predicates returns a new predicate that will be true exactly when all of them are.
+        R.allPredicates = predicateWrap(all);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Given a list of predicates returns a new predicate that will be true exactly when any one of them is.
+        R.anyPredicates = predicateWrap(any);
+
+        // Arithmetic Functions
+        // --------------------
+        //
+        // These functions wrap up the certain core arithmetic operators
+
+        // --------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Adds two numbers.  Automatic curried:
+        //
+        //     var add7 = add(7);
+        //     add7(10); // =&gt; 17
+        var add = R.add = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a + b; } :  a + b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Multiplies two numbers.  Automatically curried:
+        //
+        //     var mult3 = multiply(3);
+        //     mult3(7); // =&gt; 21
+        var multiply = R.multiply = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a * b; } :  a * b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Subtracts the second parameter from the first.  This is automatically curried, and while at times the curried
+        // version might be useful, often the curried version of &#x60;subtractN&#x60; might be what&#x27;s wanted.
+        //
+        //     var complementaryAngle = subtract(90);
+        //     complementaryAngle(30) ; // =&gt; 60
+        var subtract = R.subtract = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a - b; } :  a - b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Reversed version of &#x60;subtract&#x60;, where first parameter is subtracted from the second.  The curried version of
+        // this one might me more useful than that of &#x60;subtract&#x60;.  For instance:
+        //
+        //     var decrement = subtractN(1);
+        //     decrement(10); // =&gt; 9;
+        R.subtractN = flip(subtract);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Divides the first parameter by the second.  This is automatically curried, and while at times the curried
+        // version might be useful, often the curried version of &#x60;divideBy&#x60; might be what&#x27;s wanted.
+        var divide = R.divide = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a / b; } :  a / b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Reversed version of &#x60;divide&#x60;, where the second parameter is divided by the first.  The curried version of
+        // this one might be more useful than that of &#x60;divide&#x60;.  For instance:
+        //
+        //     var half = divideBy(2);
+        //     half(42); // =&gt; 21
+        R.divideBy = flip(divide);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Divides the second parameter by the first and returns the remainder.
+        var modulo = R.modulo = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a % b; } :  a % b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Reversed version of &#x60;modulo&#x60;, where the second parameter is divided by the first.  The curried version of
+        // this one might be more useful than that of &#x60;modulo&#x60;.  For instance:
+        //
+        //     var isOdd = moduloBy(2);
+        //     isOdd(42); // =&gt; 0
+        //     isOdd(21); // =&gt; 1
+        R.moduloBy = flip(modulo);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Adds together all the elements of a list.
+        R.sum = foldl(add, 0);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Multiplies together all the elements of a list.
+        R.product = foldl(multiply, 1);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns true if the first parameter is less than the second.
+        R.lt = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a &lt; b; } :  a &lt; b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns true if the first parameter is less than or equal to the second.
+        R.lte = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a &lt;= b; } :  a &lt;= b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns true if the first parameter is greater than the second.
+        R.gt = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a &gt; b; } :  a &gt; b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Returns true if the first parameter is greater than or equal to the second.
+        R.gte = function(a, b) {
+            return arguments.length &lt; 2 ? function(b) { return a &gt;= b; } :  a &gt;= b;
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Determines the largest of a list of numbers (or elements that can be cast to numbers)
+        var max = R.max = function(list) {
+            return foldl(binary(Math.max), -Infinity, list);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Determines the largest of a list of items as determined by pairwise comparisons from the supplied comparator
+        R.maxWith = curry2(function(keyFn, list) {
+            if (!(list &amp;&amp; list.length &gt; 0)) {
+               return undef;
+            }
+            var idx = 0, winner = list[idx], max = keyFn(winner), testKey;
+            while (++idx &lt; list.length) {
+                testKey = keyFn(list[idx]);
+                if (testKey &gt; max) {
+                    max = testKey;
+                    winner = list[idx];
+                }
+            }
+            return winner;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// TODO: combine this with maxWith?
+
+        // Determines the smallest of a list of items as determined by pairwise comparisons from the supplied comparator
+        R.minWith = curry2(function(keyFn, list) {
+            if (!(list &amp;&amp; list.length &gt; 0)) {
+                return undef;
+            }
+            var idx = 0, winner = list[idx], min = keyFn(list[idx]), testKey;
+            while (++idx &lt; list.length) {
+                testKey = keyFn(list[idx]);
+                if (testKey &lt; min) {
+                    min = testKey;
+                    winner = list[idx];
+                }
+            }
+            return winner;
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Determines the smallest of a list of numbers (or elements that can be cast to numbers)
+        R.min = function(list) {
+            return foldl(binary(Math.min), Infinity, list);
+        };
+
+
+        // String Functions
+        // ----------------
+        //
+        // Much of the String.prototype API exposed as simple functions.
+
+        // --------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// A substring of a String:
+        //
+        //     substring(2, 5, &quot;abcdefghijklm&quot;); //=&gt; &quot;cde&quot;
+        var substring = R.substring = invoker(&quot;substring&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// The trailing substring of a String starting with the nth character:
+        //
+        //     substringFrom(8, &quot;abcdefghijklm&quot;); //=&gt; &quot;ijklm&quot;
+        R.substringFrom = flip(substring)(undef);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// The leading substring of a String ending before the nth character:
+        //
+        //     substringTo(8, &quot;abcdefghijklm&quot;); //=&gt; &quot;abcdefgh&quot;
+        R.substringTo = substring(0);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// The character at the nth position in a String:
+        //
+        //     charAt(8, &quot;abcdefghijklm&quot;); //=&gt; &quot;i&quot;
+        R.charAt = invoker(&quot;charAt&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// The ascii code of the character at the nth position in a String:
+        //
+        //     charCodeAt(8, &quot;abcdefghijklm&quot;); //=&gt; 105
+        //     // (... &#x27;a&#x27; ~ 97, &#x27;b&#x27; ~ 98, ... &#x27;i&#x27; ~ 105)
+        R.charCodeAt = invoker(&quot;charCodeAt&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Tests a regular expression agains a String
+        //
+        //     match(/([a-z]a)/g, &quot;bananas&quot;); //=&gt; [&quot;ba&quot;, &quot;na&quot;, &quot;na&quot;]
+        R.match = invoker(&quot;match&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Finds the index of a substring in a string, returning -1 if it&#x27;s not present
+        //
+        //     strIndexOf(&#x27;c&#x27;, &#x27;abcdefg) //=&gt; 2
+        R.strIndexOf = invoker(&quot;indexOf&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Finds the last index of a substring in a string, returning -1 if it&#x27;s not present
+        //
+        //     strLastIndexOf(&#x27;a&#x27;, &#x27;banana split&#x27;) //=&gt; 5
+        R.strLastIndexOf = invoker(&quot;lastIndexOf&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// The uppercase version of a string.
+        //
+        //     toUpperCase(&#x27;abc&#x27;) //=&gt; &#x27;ABC&#x27;
+        R.toUpperCase = invoker(&quot;toUpperCase&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// The lowercase version of a string.
+        //
+        //     toLowerCase(&#x27;XYZ&#x27;) //=&gt; &#x27;xyz&#x27;
+        R.toLowerCase = invoker(&quot;toLowerCase&quot;, String.prototype);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// The string split into substring at the specified token
+        //
+        //     split(&#x27;.&#x27;, &#x27;a.b.c.xyz.d&#x27;) //=&gt;
+        //         [&#x27;a&#x27;, &#x27;b&#x27;, &#x27;c&#x27;, &#x27;xyz&#x27;, &#x27;d&#x27;]
+        R.split = invoker(&quot;split&quot;, String.prototype, 1);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// internal path function
+        // Takes an array, paths, indicating the deep set of keys
+        // to find. E.g.
+        // path([&#x27;a&#x27;, &#x27;b&#x27;], {a: {b: 2}}) // =&gt; 2
+        function path(paths, obj) {
+            var i = -1, length = paths.length, val;
+            while (obj != null &amp;&amp; ++i &lt; length) {
+                obj = val = obj[paths[i]];
+            }
+            return val;
+        }<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Retrieve a computed path by a function, fn. Fn will be given
+        // a string, str which it will use to compute the path
+        // e.g. fn(&quot;a.b&quot;) =&gt; [&quot;a&quot;, &quot;b&quot;]
+        // This path will be looked up on the object
+        R.pathWith = curry3(function pathWith(fn, str, obj) {
+            var paths = fn(str) || [];
+            return path(paths, obj);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Retrieve a value on an object from a deep path, str
+        // different properties on nested objects are indicated in string
+        // by a seperator, sep
+        // R.pathOn(&quot;|&quot;, &quot;a|b&quot;, {a: {b: 2}}) // =&gt; 2
+        R.pathOn = curry3(function pathOn(sep, str, obj) {
+            return path(str.split(sep), obj);
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Retrieve a nested path on an object seperated by periods
+        // R.path(&#x27;a.b&#x27;], {a: {b: 2}}) // =&gt; 2
+        R.path = R.pathOn(&#x27;.&#x27;);
+
+        // Data Analysis and Grouping Functions
+        // ------------------------------------
+        //
+        // Functions performing SQL-like actions on lists of objects.  These do not have any SQL-like optimizations
+        // performed on them, however.
+
+        // --------<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Reasonable analog to SQL &#x60;select&#x60; statement.
+        //
+        //     var kids = [
+        //         {name: &#x27;Abby&#x27;, age: 7, hair: &#x27;blond&#x27;, grade: 2},
+        //         {name: &#x27;Fred&#x27;, age: 12, hair: &#x27;brown&#x27;, grade: 7}
+        //     ];
+        //     project([&#x27;name&#x27;, &#x27;grade&#x27;], kids);
+        //     //=&gt; [{name: &#x27;Abby&#x27;, grade: 2}, {name: &#x27;Fred&#x27;, grade: 7}]
+        R.project = useWith(map, R.pickAll, identity); // passing &#x60;identity&#x60; gives correct arity<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Determines whether the given property of an object has a specific value
+        // Most likely used to filter a list:
+        //
+        //     var kids = [
+        //       {name: &#x27;Abby&#x27;, age: 7, hair: &#x27;blond&#x27;},
+        //       {name: &#x27;Fred&#x27;, age: 12, hair: &#x27;brown&#x27;},
+        //       {name: &#x27;Rusty&#x27;, age: 10, hair: &#x27;brown&#x27;},
+        //       {name: &#x27;Alois&#x27;, age: 15, disposition: &#x27;surly&#x27;}
+        //     ];
+        //     filter(propEq(&quot;hair&quot;, &quot;brown&quot;), kids);
+        //     //=&gt; Fred and Rusty
+        R.propEq = function (name, val, obj) {
+            var f1 = function propEqCurried1(val, obj) {
+                var f2 = function propEqCurried2(obj) {
+                    return obj[name] === val;
+                };
+                return arguments.length &lt; 2 ? f2 : f2(obj);
+            };
+            return arguments.length &lt; 2 ? f1 :
+                arguments.length &lt; 3 ? f1(val) :
+                    f1(val, obj);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Combines two lists into a set (i.e. no duplicates) composed of the elements of each list.
+        R.union = compose(uniq, R.concat);<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Combines two lists into a set (i.e. no duplicates) composed of the elements of each list.  Duplication is
+        // determined according to the value returned by applying the supplied predicate to two list elements.
+        R.unionWith = curry3(function (pred, list1, list2) {
+            return uniqWith(pred, concat(list1, list2));
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Finds the set (i.e. no duplicates) of all elements in the first list not contained in the second list.
+        R.difference = curry2(function(first, second) {
+            return uniq(reject(flip(contains)(second), first));
+        });<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Finds the set (i.e. no duplicates) of all elements in the first list not contained in the second list.
+        // Duplication is determined according to the value returned by applying the supplied predicate to two list
+        // elements.
+        R.differenceWith = function (pred, first, second) {
+            var f1 = function differenceWithCurried1(first, second) {
+                var f2 = function differenceWithCurried2(second) {
+                    return uniqWith(pred)(reject(flip(R.containsWith(pred))(second), first));
+                };
+                return arguments.length &lt; 2 ? f2 : f2(second);
+            };
+            return arguments.length &lt; 2 ? f1 :
+                arguments.length &lt; 3 ? f1(first) :
+                    f1(first, second);
+        };
+
+        // Combines two lists into a set (i.e. no duplicates) composed of those elements common to both lists.
+        R.intersection = function(list1, list2) {
+            function _intersection(list2) {
+                return uniq(filter(flip(contains)(list1), list2));
+            }
+            return arguments.length &lt; 2 ? _intersection : _intersection(list2);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Combines two lists into a set (i.e. no duplicates) composed of those elements common to both lists.
+        // Duplication is determined according to the value returned by applying the supplied predicate to two list
+        // elements.
+        R.intersectionWith = function (pred, list1, list2) {
+            var f1 = function intersectionWithCurried1(list1, list2) {
+                var f2 = function intersectionWithCurried2(list2) {
+                    var results = [], idx = -1;
+                    while (++idx &lt; list1.length) {
+                        if (containsWith(pred, list1[idx], list2)) {
+                            results[results.length] = list1[idx];
+                        }
+                    }
+                    return uniqWith(pred, results);
+                };
+                return arguments.length &lt; 2 ? f2 : f2(list2);
+            };
+            return arguments.length &lt; 2 ? f1 :
+                arguments.length &lt; 3 ? f1(list1) :
+                    f1(list1, list2);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Creates a new list whose elements each have two properties: &#x60;val&#x60; is the value of the corresponding
+        // item in the list supplied, and &#x60;key&#x60; is the result of applying the supplied function to that item.
+        var keyValue = function(fn, list) { // TODO: Should this be made public?
+            function _keyValue(list) {
+                return map(function(item) {return {key: fn(item), val: item};}, list);
+            }
+            return arguments.length &lt; 2 ? _keyValue : _keyValue(list);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Sorts the list according to a key generated by the supplied function.
+        R.sortBy = function(fn, list) {<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#_sortBy">_sortBy</a></h1>
+        <h2>&lt;p&gt;return sort(comparator(function(a, b) {return fn(a) &amp;lt; fn(b);}), list); // clean, but too time-inefficient&lt;br /&gt;              return pluck(&amp;quot;val&amp;quot;, sort(comparator(function(a, b) {return a.key &amp;lt; b.key;}), keyValue(fn, list))); // nice, but no need to clone result of keyValue call, so...&lt;/p&gt;<h2>
+        <pre>function _sortBy(list) {
+                return pluck(&quot;val&quot;, keyValue(fn, list).sort(comparator(function(a, b) {return a.key &lt; b.key;})));
+            }
+            return arguments.length &lt; 2 ? _sortBy : _sortBy(list);
+        };<pre>
+    </div>
+
+    <div>
+        <h1><a href="index.html#---">---</a></h1>
+        <h2>&lt;p&gt;TODO: JSDoc-style documentation for this function&lt;/p&gt;<h2>
+        <pre>// Counts the elements of a list according to how many match each value of a key generated by the supplied function.
+        R.countBy = function(fn, list) {
+            function _countBy(list) {
+                return foldl(function(counts, obj) {
+                    counts[obj.key] = (counts[obj.key] || 0) + 1;
+                    return counts;
+                }, {}, keyValue(fn, list));
+            }
+            return arguments.length &lt; 2 ? _countBy : _countBy(list);
+        };
+
+        // All the functional goodness, wrapped in a nice little package, just for you!
+        return R;
+    }());
+}));<pre>
+    </div>
+
+</body>
+</html>
